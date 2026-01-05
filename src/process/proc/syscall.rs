@@ -39,6 +39,7 @@ pub trait Syscall {
     fn sys_link(&mut self) -> SysResult;
     fn sys_mkdir(&mut self) -> SysResult;
     fn sys_close(&mut self) -> SysResult;
+    fn sys_trace(&mut self) -> SysResult;
 }
 
 impl Syscall for Proc {
@@ -190,6 +191,12 @@ impl Syscall for Proc {
 
         if result.is_err() {
             syscall_warning(error);
+        }
+        if result.is_ok() && self.excl.lock().pid == 1 {
+            // 获取并打印页表
+            if let Some(ref pagetable) = self.data.get_mut().pagetable {
+                pagetable.vm_print();
+            }
         }
         result
     }
@@ -498,6 +505,12 @@ impl Syscall for Proc {
         drop(file);
         Ok(0)
     }
+
+    fn sys_trace(&mut self) -> SysResult {
+    let mask = self.arg_i32(0); // 获取用户传入的参数
+    self.data.get_mut().trace_mask = mask; // 保存到进程数据里
+    Ok(0)
+}
 }
 
 // LTODO - switch to macro that can include line numbers
